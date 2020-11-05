@@ -1,0 +1,27 @@
+<idea-plugin>
+    <id>dev.kandavu.intellij-plugin</id>
+    <name>Kandavu</name>
+    <vendor email="support@kandavu.dev" url="https://www.mysticcoders.com">Mystic Coders, LLC</vendor>
+
+    <description><![CDATA[
+    A plugin for managing statuses and other features of
+    the kandavu platform
+    ]]></description>
+
+    <!-- please see https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
+         on how to target different products -->
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Add your extensions here -->
+        <applicationConfigurable instance="dev.kandavu.intellij.ConfigPersistentStateConfigurable" id="kandavu.intellij" displayName="Kandavu"/>
+    </extensions>
+
+    <actions>
+        <action id="AddStatus" class="dev.kandavu.intellij.AddStatusAction"
+                text="Add Status" icon="/kandavu-icon.png">
+            <add-to-group group-id="ToolbarRunGroup" relative-to-action="Stop" anchor="after" />
+        </action>
+        <!-- Add your actions here -->
+    </actions>
+</idea-plugin>
