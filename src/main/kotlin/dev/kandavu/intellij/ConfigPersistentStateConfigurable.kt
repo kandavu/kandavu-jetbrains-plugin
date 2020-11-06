@@ -1,64 +1,119 @@
 package dev.kandavu.intellij
 
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.Configurable.NoScroll
 import com.intellij.util.ui.FormBuilder
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.FlowLayout
 import java.awt.event.ActionEvent
 import java.awt.event.ActionListener
-import java.text.NumberFormat
-import java.util.*
+import java.io.IOException
 import javax.swing.*
-import javax.swing.text.NumberFormatter
+
+class Login(
+    val username: String,
+    val password: String,
+) {
+    override fun toString(): String {
+        return "Login [username: ${this.username}]"
+    }
+}
 
 class ConfigPersistentStateConfigurable : Configurable, NoScroll, Disposable {
-    // configurations for the text fields
-    private val hourFormatter = NumberFormatter(NumberFormat.getIntegerInstance()).also {
-        it.minimum = 0
-        it.maximum = 23
-        it.allowsInvalid = true
-    }
-
-    private val minutesFormatter = NumberFormatter(NumberFormat.getIntegerInstance()).also {
-        it.minimum = 0
-        it.maximum = 59
-        it.allowsInvalid = true
-    }
-
     // this is the persistent component we can read or write to
-    private val configState
+    private val state
         get() = ConfigPersistentStateComponent.instance.state
 
     // ui components
-    private var showToolbarCheckbox: JCheckBox? = JCheckBox("Show Toolbar Button")
-    private var showRemindersCheckbox: JCheckBox? = JCheckBox("Show Reminder Notifications")
-
     private var usernameField: JTextField? = JTextField()
     private var passwordField: JPasswordField? = JPasswordField()
 
-    private var hourField: JFormattedTextField? =
-        JFormattedTextField(hourFormatter).also { it.text = "" }
+    val gson = Gson()
 
-    private var minutesField: JTextField? =
-        JFormattedTextField(minutesFormatter).also { it.text = "" }
-
-    private var loginButton = JButton("Login").apply {
+    private var loginButton: JButton? = JButton("Login").apply {
         actionCommand = "Login"
         addActionListener(LoginClickListener())
     }
 
+    private var logoutButton: JButton? = JButton("Logout").apply {
+        actionCommand = "Logout"
+        addActionListener(LogoutClickListener())
+    }
+
+    companion object {
+        val MEDIA_TYPE_JSON = "application/json; charset=utf-8".toMediaType()
+    }
+
     private inner class LoginClickListener : ActionListener {
         override fun actionPerformed(e: ActionEvent) {
-//            val passwordData = Arrays.toString(passwordField?.password)
-
             val password: String? = passwordField?.password?.concatToString()
-            System.out.println("username: ${usernameField?.text}")
-            System.out.println("password: $password")
-            System.out.println("Login clicked")
+
+            val client = OkHttpClient()
+
+            val login = password?.let { usernameField?.text?.let { it1 -> Login(it1, it) } }
+
+            val loginJson: String = gson.toJson(login)
+
+            val request = Request.Builder()
+                .url("${state.API_URL}/accounts/login")
+                .post(loginJson.toRequestBody(MEDIA_TYPE_JSON))
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) throw IOException("Unexpected code $response")
+
+                val mapType = object : TypeToken<Map<String, Any>>() {}.type
+
+                var authorizationMap: Map<String, Any> = gson.fromJson(
+                    response.body!!.string(),
+                    object : TypeToken<Map<String, Any>>() {}.type
+                )
+
+                val authorizationKey: String = authorizationMap.get("authorizationKey") as String
+                val username: String = authorizationMap.get("username") as String
+
+                state.authorizationKey = authorizationKey
+                state.username = username
+
+            }
         }
+    }
+
+    private inner class LogoutClickListener : ActionListener {
+        override fun actionPerformed(e: ActionEvent) {
+            val client = OkHttpClient()
+
+            if(state.authorizationKey != null) {
+                val request = Request.Builder()
+                    .url("${state.API_URL}/accounts/logout")
+                    .header("Authorization", state.authorizationKey as String)
+                    .post("".toRequestBody())
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    if(!response.isSuccessful) println("Unexpected code when attempting to logout $response")
+
+                    state.authorizationKey = null
+                    state.username = null
+                }
+            }
+
+            state.authorizationKey = null
+            state.username = null
+        }
+    }
+
+
+    override fun getPreferredFocusedComponent(): JComponent? {
+        return usernameField
     }
 
     // providing a title
@@ -67,30 +122,41 @@ class ConfigPersistentStateConfigurable : Configurable, NoScroll, Disposable {
     // creating the ui
     override fun createComponent(): JComponent? {
 
-        val formPanel = FormBuilder.createFormBuilder()
-            // show toolbar button checkbox
-            .addLabeledComponent("Username: ", JPanel(FlowLayout(FlowLayout.CENTER)).also {
-                usernameField?.preferredSize = Dimension(300, 30)
-                it.add(usernameField)
-            })
-            .addLabeledComponent("Password: ", JPanel(FlowLayout(FlowLayout.CENTER)).also {
-                passwordField?.preferredSize = Dimension(300, 30)
-                it.add(passwordField)
-            })
-            .addComponent(JPanel(FlowLayout(FlowLayout.CENTER)).also {
-                it.add(loginButton)
-            })
-            .panel
-        
-        return JPanel(BorderLayout()).also { it.add(formPanel, BorderLayout.NORTH) }
+        println(state)
+        if(state.authorizationKey !== null && state.username !== null) {
+            println("state.authorizationKey ${state.authorizationKey} or state.username ${state.username} is equal to null")
+            val logoutPanel = JPanel(FlowLayout(FlowLayout.CENTER)).also {
+                it.add(logoutButton)
+            }
+            return JPanel(BorderLayout()).also {
+                it.add(logoutPanel, BorderLayout.NORTH)
+            }
+        } else {
+            val formPanel = FormBuilder.createFormBuilder()
+                // show toolbar button checkbox
+                .addLabeledComponent("Username: ", JPanel(FlowLayout(FlowLayout.CENTER)).also {
+                    usernameField?.preferredSize = Dimension(300, 30)
+                    it.add(usernameField)
+                })
+                .addLabeledComponent("Password: ", JPanel(FlowLayout(FlowLayout.CENTER)).also {
+                    passwordField?.preferredSize = Dimension(300, 30)
+                    it.add(passwordField)
+                })
+                .addComponent(JPanel(FlowLayout(FlowLayout.CENTER)).also {
+                    it.add(loginButton)
+                })
+                .panel
+
+            return JPanel(BorderLayout()).also { it.add(formPanel, BorderLayout.NORTH) }
+        }
     }
 
 
     override fun dispose() {
-        hourField = null
-        minutesField = null
-        showToolbarCheckbox = null
-        showRemindersCheckbox = null
+        usernameField = null
+        passwordField = null
+        loginButton = null
+        logoutButton = null
     }
 
     // this tells the preferences window whether to enable or disable the "Apply" button.
@@ -122,9 +188,7 @@ class ConfigPersistentStateConfigurable : Configurable, NoScroll, Disposable {
 
     // hitting "reset" shold reset the ui to the latest saved config
     override fun reset() {
-//        hourField!!.text = configState.reminderHour.toString()
-//        minutesField!!.text = configState.reminderMinutes.toString()
-//        showToolbarCheckbox!!.isSelected = configState.showToolbarIcon
-//        showRemindersCheckbox!!.isSelected = configState.showReminders
+        usernameField?.text = ""
+        passwordField?.text = ""
     }
 }

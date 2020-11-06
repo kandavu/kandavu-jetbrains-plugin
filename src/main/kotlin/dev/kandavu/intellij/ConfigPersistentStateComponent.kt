@@ -4,14 +4,13 @@ import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.ServiceManager
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
-import java.time.LocalDateTime
 
 // the @State annotation helps IntelliJ automatically serialize and save our state
 @State(
     name = "ConfigPersistentStateComponent",
     storages = [Storage("kandavu-plugin.xml")]
 )
-open class ConfigPersistentStateComponent  : PersistentStateComponent<ConfigPersistentStateComponent.ConfigState> {
+open class ConfigPersistentStateComponent  : PersistentStateComponent<ConfigPersistentStateComponent.State> {
     // this is how we're going to call the component from different classes
     companion object {
         val instance: ConfigPersistentStateComponent
@@ -19,20 +18,25 @@ open class ConfigPersistentStateComponent  : PersistentStateComponent<ConfigPers
     }
 
     // the component will always keep our state as a variable
-    var configState: ConfigState = ConfigState()
-
-    // just an obligatory override from PersistentStateComponent
-    override fun getState(): ConfigState {
-        return configState
-    }
-
-    // after automatically loading our save state,  we will keep reference to it
-    override fun loadState(state: ConfigState) {
-        configState = state
-    }
+    private var state = State()
 
     // the POKO class that always keeps our state
-    class ConfigState {
-        var authorizationKey = null
+    data class State(
+        var authorizationKey: String? = null,
+        var username: String? = null,
+        var API_URL: String? = "http://localhost:5000"
+//        var API_URL: String? = "https://api.kandavu.dev"
+    )
+
+    // just an obligatory override from PersistentStateComponent
+    override fun getState(): State {
+        return state
+    }
+
+    override fun loadState(stateLoadedFromPersistence: State) {
+        println("IDEA called loadState(stateLoadedFromPersistence)")
+        state = stateLoadedFromPersistence
+
+        println(state)
     }
 }

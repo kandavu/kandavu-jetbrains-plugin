@@ -12,11 +12,6 @@
          on how to target different products -->
     <depends>com.intellij.modules.platform</depends>
 
-    <extensions defaultExtensionNs="com.intellij">
-        <!-- Add your extensions here -->
-        <applicationConfigurable instance="dev.kandavu.intellij.ConfigPersistentStateConfigurable" id="kandavu.intellij" displayName="Kandavu"/>
-    </extensions>
-
     <actions>
         <action id="AddStatus" class="dev.kandavu.intellij.AddStatusAction"
                 text="Add Status" icon="/kandavu-icon.png">
@@ -24,4 +19,23 @@
         </action>
         <!-- Add your actions here -->
     </actions>
+
+
+    <!-- application level components -->
+<!--    <application-components>-->
+<!--        <component>-->
+<!--            <implementation-class>dev.kandavu.intellij.ConfigPersistentStateComponent</implementation-class>-->
+<!--        </component>-->
+<!--    </application-components>-->
+
+    <!-- the persistent state service-->
+    <extensions defaultExtensionNs="com.intellij">
+        <applicationService
+                serviceInterface="dev.kandavu.intellij.ConfigPersistentStateComponent"
+                serviceImplementation="dev.kandavu.intellij.ConfigPersistentStateComponent" />
+
+        <applicationConfigurable instance="dev.kandavu.intellij.ConfigPersistentStateConfigurable" id="kandavu.intellij" displayName="Kandavu"/>
+
+    </extensions>
+
 </idea-plugin>
