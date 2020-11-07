@@ -1,20 +1,16 @@
 package dev.kandavu.intellij
 
 import com.google.gson.Gson
+import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.PlatformDataKeys
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.ui.popup.Balloon
 import com.intellij.openapi.editor.Editor;
-import com.intellij.openapi.ui.MessageType
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupFactory
-import com.intellij.ui.JBColor
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import java.awt.Color
 import java.awt.FlowLayout
 import java.awt.event.ActionEvent
 import java.awt.event.ActionListener
@@ -22,6 +18,8 @@ import java.io.IOException
 import javax.swing.JButton
 import javax.swing.JPanel
 import javax.swing.JTextField
+import javax.swing.border.Border
+import javax.swing.border.EmptyBorder
 
 
 class AddStatusAction : AnAction() {
@@ -83,17 +81,22 @@ class AddStatusAction : AnAction() {
                 statusField!!.text = ""
                 statusPopup!!.dispose()
 
-                StatusNotification.notifyUser()
+                StatusNotification.notifyEvent("Status", "Status has been updated.")
             }
         }
     }
 
     override fun actionPerformed(event: AnActionEvent) {
-        val jbPopupFactory = JBPopupFactory.getInstance()
+        if(state.authorizationKey === null) {
+            StatusNotification.notifyEvent("Status", "Login not found, please login in Kandavu preferences", NotificationType.ERROR)
+
+            return
+        }
 
         editor = event.getData(PlatformDataKeys.EDITOR)
-
         statusField!!.columns = 20
+
+        val margin : Border = EmptyBorder(10, 10, 10, 10)
 
         val statusTextFieldPanel = JPanel(FlowLayout(FlowLayout.CENTER)).also {
             it.add(statusField)
@@ -101,17 +104,16 @@ class AddStatusAction : AnAction() {
             it.add(cancelAddStatusButton)
         }
 
-        statusPopup = jbPopupFactory.createComponentPopupBuilder(statusTextFieldPanel, statusField)
-            .setShowBorder(false)
-            .setShowShadow(false)
+        statusTextFieldPanel.border = margin
+
+        statusPopup = JBPopupFactory.getInstance().createComponentPopupBuilder(statusTextFieldPanel, statusField)
+            .setShowBorder(true)
+            .setShowShadow(true)
             .setRequestFocus(true)
             .setCancelOnWindowDeactivation(true)
             .createPopup()
 
         statusPopup!!.showInFocusCenter()
-
-//        val message = jbPopupFactory.createMessage("This is a message to display")
-//        message.show(relativePoint)
     }
 
 }

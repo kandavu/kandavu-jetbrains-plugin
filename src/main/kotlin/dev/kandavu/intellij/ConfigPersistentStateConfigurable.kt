@@ -10,13 +10,12 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import java.awt.BorderLayout
-import java.awt.Dimension
-import java.awt.FlowLayout
+import java.awt.*
 import java.awt.event.ActionEvent
 import java.awt.event.ActionListener
 import java.io.IOException
 import javax.swing.*
+
 
 class Login(
     val username: String,
@@ -35,6 +34,10 @@ class ConfigPersistentStateConfigurable : Configurable, NoScroll, Disposable {
     // ui components
     private var usernameField: JTextField? = JTextField()
     private var passwordField: JPasswordField? = JPasswordField()
+
+    private var statusLabel: JLabel? = JLabel()
+
+    private var cardPanel: JPanel? = JPanel(CardLayout())
 
     val gson = Gson()
 
@@ -62,27 +65,39 @@ class ConfigPersistentStateConfigurable : Configurable, NoScroll, Disposable {
 
             val loginJson: String = gson.toJson(login)
 
+            statusLabel?.text = "Logging in..."
+
             val request = Request.Builder()
                 .url("${state.API_URL}/accounts/login")
                 .post(loginJson.toRequestBody(MEDIA_TYPE_JSON))
                 .build()
 
             client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) throw IOException("Unexpected code $response")
+                if (!response.isSuccessful) {
+                    println("Unexpected code $response")
+                    statusLabel?.text = "Login failed"
+                } else {
+                    val mapType = object : TypeToken<Map<String, Any>>() {}.type
 
-                val mapType = object : TypeToken<Map<String, Any>>() {}.type
+                    var authorizationMap: Map<String, Any> = gson.fromJson(
+                        response.body!!.string(),
+                        object : TypeToken<Map<String, Any>>() {}.type
+                    )
 
-                var authorizationMap: Map<String, Any> = gson.fromJson(
-                    response.body!!.string(),
-                    object : TypeToken<Map<String, Any>>() {}.type
-                )
+                    val authorizationKey: String = authorizationMap.get("authorizationKey") as String
+                    val username: String = authorizationMap.get("username") as String
 
-                val authorizationKey: String = authorizationMap.get("authorizationKey") as String
-                val username: String = authorizationMap.get("username") as String
+                    state.authorizationKey = authorizationKey
+                    state.username = username
 
-                state.authorizationKey = authorizationKey
-                state.username = username
+                    usernameField?.text = ""
+                    passwordField?.text = ""
 
+                    val cl : CardLayout = cardPanel?.layout as CardLayout
+                    cl.show(cardPanel, "logoutPanel")
+
+                    statusLabel?.text = "Logged in as ${state.username}"
+                }
             }
         }
     }
@@ -108,6 +123,9 @@ class ConfigPersistentStateConfigurable : Configurable, NoScroll, Disposable {
 
             state.authorizationKey = null
             state.username = null
+
+            val cl : CardLayout = cardPanel?.layout as CardLayout
+            cl.show(cardPanel, "loginPanel")
         }
     }
 
@@ -119,36 +137,61 @@ class ConfigPersistentStateConfigurable : Configurable, NoScroll, Disposable {
     // providing a title
     override fun getDisplayName(): String = "Kandavu Plugin Configuration"
 
+
     // creating the ui
     override fun createComponent(): JComponent? {
 
-        println(state)
-        if(state.authorizationKey !== null && state.username !== null) {
-            println("state.authorizationKey ${state.authorizationKey} or state.username ${state.username} is equal to null")
-            val logoutPanel = JPanel(FlowLayout(FlowLayout.CENTER)).also {
-                it.add(logoutButton)
-            }
-            return JPanel(BorderLayout()).also {
-                it.add(logoutPanel, BorderLayout.NORTH)
-            }
-        } else {
-            val formPanel = FormBuilder.createFormBuilder()
-                // show toolbar button checkbox
-                .addLabeledComponent("Username: ", JPanel(FlowLayout(FlowLayout.CENTER)).also {
-                    usernameField?.preferredSize = Dimension(300, 30)
-                    it.add(usernameField)
-                })
-                .addLabeledComponent("Password: ", JPanel(FlowLayout(FlowLayout.CENTER)).also {
-                    passwordField?.preferredSize = Dimension(300, 30)
-                    it.add(passwordField)
-                })
-                .addComponent(JPanel(FlowLayout(FlowLayout.CENTER)).also {
-                    it.add(loginButton)
-                })
-                .panel
-
-            return JPanel(BorderLayout()).also { it.add(formPanel, BorderLayout.NORTH) }
+        val logoutPanel = JPanel(FlowLayout(FlowLayout.CENTER)).also {
+            it.add(logoutButton)
         }
+
+        val formPanel = FormBuilder.createFormBuilder()
+            // show toolbar button checkbox
+            .addLabeledComponent("Username: ", JPanel(FlowLayout(FlowLayout.CENTER)).also {
+                usernameField?.preferredSize = Dimension(300, 30)
+                it.add(usernameField)
+            })
+            .addLabeledComponent("Password: ", JPanel(FlowLayout(FlowLayout.CENTER)).also {
+                passwordField?.preferredSize = Dimension(300, 30)
+                it.add(passwordField)
+            })
+            .addComponent(JPanel(FlowLayout(FlowLayout.CENTER)).also {
+                it.add(loginButton)
+            })
+            .panel
+
+        cardPanel?.add(JPanel(BorderLayout()).also {
+
+            val logoutFlowPanel: JPanel = JPanel(GridLayout(2, 1)).also {
+                it.add(statusLabel)
+                it.add(logoutPanel)
+            }
+            it.add(logoutFlowPanel, BorderLayout.NORTH)
+
+        }, "logoutPanel")
+
+        cardPanel?.add(JPanel(BorderLayout()).also {
+            val loginFlowPanel: JPanel = JPanel(GridLayout(2, 1)).also {
+                it.add(statusLabel)
+                it.add(formPanel)
+            }
+
+            it.add(loginFlowPanel, BorderLayout.NORTH)
+        }, "loginPanel")
+
+        if(state.authorizationKey !== null && state.username !== null) {
+            val cl : CardLayout = cardPanel?.layout as CardLayout
+            cl.show(cardPanel, "logoutPanel")
+
+            println("state.authorizationKey ${state.authorizationKey} or state.username ${state.username} is equal to null")
+        } else {
+            val cl : CardLayout = cardPanel?.layout as CardLayout
+            statusLabel?.text = ""
+
+            cl.show(cardPanel, "loginPanel")
+        }
+
+        return cardPanel
     }
 
 
@@ -162,28 +205,12 @@ class ConfigPersistentStateConfigurable : Configurable, NoScroll, Disposable {
     // this tells the preferences window whether to enable or disable the "Apply" button.
     // so if the user has changed anything - we want to know.
     override fun isModified(): Boolean {
-
         return false
-//        return configState.reminderHour != hourField!!.text.toIntOrNull()
-//                || configState.reminderMinutes != minutesField!!.text.toIntOrNull()
-//                || configState.showToolbarIcon != showToolbarCheckbox!!.isSelected
-//                || configState.showReminders != showRemindersCheckbox!!.isSelected
     }
 
     // when the user hits "ok" or "apply" we want o update the configurable state
     override fun apply() {
-//        hourField!!.text.toIntOrNull()?.let {
-//            if (it in 0..23)
-//                configState.reminderHour = it
-//
-//        }
-//
-//        minutesField!!.text.toIntOrNull()?.let {
-//            if (it in 0..59)
-//                configState.reminderMinutes = it
-//        }
-//        configState.showToolbarIcon = showToolbarCheckbox!!.isSelected
-//        configState.showReminders = showRemindersCheckbox!!.isSelected
+        // we don't currently have configurable state in the config panel
     }
 
     // hitting "reset" shold reset the ui to the latest saved config

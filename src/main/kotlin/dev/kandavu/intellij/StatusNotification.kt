@@ -14,9 +14,9 @@ object StatusNotification {
         notification.expire()
     }
 
-    fun notifyUser() {
+    fun notifyEvent(title: String, content: String, notificationType: NotificationType = NotificationType.INFORMATION) {
         // create notification
-        val notification = group.createNotification("Status", "Status has been added", NotificationType.INFORMATION, notificationListener)
+        val notification = group.createNotification(title, content, NotificationType.INFORMATION, notificationListener)
 
         // ping user, not need for project object
         notification.notify(null)
