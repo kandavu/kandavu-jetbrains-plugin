@@ -8,25 +8,15 @@
     the kandavu platform
     ]]></description>
 
-    <!-- please see https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
-         on how to target different products -->
     <depends>com.intellij.modules.platform</depends>
 
     <actions>
         <action id="AddStatus" class="dev.kandavu.intellij.AddStatusAction"
                 text="Add Status" icon="/kandavu-icon.png">
             <add-to-group group-id="ToolbarRunGroup" relative-to-action="Stop" anchor="after" />
+            <keyboard-shortcut first-keystroke="control alt K" keymap="$default" replace-all="true"/>
         </action>
-        <!-- Add your actions here -->
     </actions>
-
-
-    <!-- application level components -->
-<!--    <application-components>-->
-<!--        <component>-->
-<!--            <implementation-class>dev.kandavu.intellij.ConfigPersistentStateComponent</implementation-class>-->
-<!--        </component>-->
-<!--    </application-components>-->
 
     <!-- the persistent state service-->
     <extensions defaultExtensionNs="com.intellij">

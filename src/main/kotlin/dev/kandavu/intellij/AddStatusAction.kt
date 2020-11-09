@@ -71,7 +71,7 @@ class AddStatusAction : AnAction() {
 
             val request = Request.Builder()
                 .url("${state.API_URL}/statuses")
-                .header("Authorization", state.authorizationKey as String)
+                .header("Authorization", state.accessToken as String)
                 .post(statusJson.toRequestBody(ConfigPersistentStateConfigurable.MEDIA_TYPE_JSON))
                 .build()
 
@@ -87,8 +87,8 @@ class AddStatusAction : AnAction() {
     }
 
     override fun actionPerformed(event: AnActionEvent) {
-        if(state.authorizationKey === null) {
-            StatusNotification.notifyEvent("Status", "Login not found, please login in Kandavu preferences", NotificationType.ERROR)
+        if(state.accessToken === null || state.accessToken!!.isEmpty()) {
+            StatusNotification.notifyEvent("Status", "Access Token not found, please add your personal access token for Kandavu in preferences", NotificationType.ERROR)
 
             return
         }
