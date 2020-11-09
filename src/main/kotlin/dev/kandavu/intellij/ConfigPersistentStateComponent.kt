@@ -36,9 +36,6 @@ open class ConfigPersistentStateComponent  : PersistentStateComponent<ConfigPers
     }
 
     override fun loadState(stateLoadedFromPersistence: State) {
-        println("IDEA called loadState(stateLoadedFromPersistence)")
         state = stateLoadedFromPersistence
-
-        println(state)
     }
 }

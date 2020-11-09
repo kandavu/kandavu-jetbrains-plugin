@@ -11,6 +11,8 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.awt.*
 import javax.swing.*
+import javax.swing.event.DocumentEvent
+import javax.swing.event.DocumentListener
 
 class ConfigPersistentStateConfigurable : Configurable, NoScroll, Disposable {
 
@@ -41,6 +43,32 @@ class ConfigPersistentStateConfigurable : Configurable, NoScroll, Disposable {
         val formPanel = FormBuilder.createFormBuilder()
             .addLabeledComponent("Access Token: ", JPanel(FlowLayout(FlowLayout.CENTER)).also {
                 accessTokenField?.preferredSize = Dimension(300, 30)
+
+                accessTokenField?.document?.addDocumentListener(object : DocumentListener {
+                    override fun changedUpdate(e: DocumentEvent) {
+                        if(state.accessToken != accessTokenField!!.text) {
+                            statusLabel?.text = ""
+                        } else {
+                            updateStatusLabelWithState()
+                        }
+                    }
+
+                    override fun insertUpdate(e: DocumentEvent?) {
+                        if(state.accessToken != accessTokenField!!.text) {
+                            statusLabel?.text = ""
+                        } else {
+                            updateStatusLabelWithState()
+                        }
+                    }
+
+                    override fun removeUpdate(e: DocumentEvent?) {
+                        if(state.accessToken != accessTokenField!!.text) {
+                            statusLabel?.text = ""
+                        } else {
+                            updateStatusLabelWithState()
+                        }
+                    }
+                })
 
                 it.add(accessTokenField)
             })
@@ -91,13 +119,11 @@ class ConfigPersistentStateConfigurable : Configurable, NoScroll, Disposable {
                             object : TypeToken<Map<String, Any>>() {}.type
                         )
 
-                        println(authorizationMap)
-
                         state.username = authorizationMap.get("username") as String?
                         state.email = authorizationMap.get("email") as String?
                         state.name = "${authorizationMap.get("firstName")} ${authorizationMap.get("lastName")}"
 
-                        statusLabel?.text = "${state.username} logged in with email: ${state.email} and name: ${state.name}"
+                        updateStatusLabelWithState()
                     }
                 }
             }
@@ -111,7 +137,15 @@ class ConfigPersistentStateConfigurable : Configurable, NoScroll, Disposable {
         }
     }
 
+    fun updateStatusLabelWithState() {
+        statusLabel?.text = "<html><b>${state.username}</b> logged in with email: <b>${state.email}</b></html>"
+    }
+
     override fun reset() {
         accessTokenField?.text = state.accessToken
+
+        if(state.username?.isNotEmpty()!! && state.email?.isNotEmpty()!! && state.name?.isNotEmpty()!!) {
+            updateStatusLabelWithState()
+        }
     }
 }
