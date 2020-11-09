@@ -2,8 +2,6 @@
 
 Draft plugin for adding status updates to Kandavu using an IntelliJ-based IDE.
 
-<iframe frameborder="none" width="245px" height="48px" src="https://plugins.jetbrains.com/embeddable/install/15356"></iframe>
-
 ## Access Token
 In order to update your status on Kandavu, you'll need to visit your profile at
 https://kandavu.dev/profile and scroll down to the section where it has you
