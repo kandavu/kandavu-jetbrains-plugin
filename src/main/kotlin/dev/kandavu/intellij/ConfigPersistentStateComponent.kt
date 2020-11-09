@@ -26,8 +26,7 @@ open class ConfigPersistentStateComponent  : PersistentStateComponent<ConfigPers
         var username: String? = null,
         var name: String? = null,
         var email: String? = null,
-        var API_URL: String? = "http://localhost:5000"
-//        var API_URL: String? = "https://api.kandavu.dev"
+        var API_URL: String? = "https://api.kandavu.dev"
     )
 
     // just an obligatory override from PersistentStateComponent
