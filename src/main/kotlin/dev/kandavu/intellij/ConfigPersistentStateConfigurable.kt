@@ -32,6 +32,7 @@ class ConfigPersistentStateConfigurable : Configurable, NoScroll, Disposable {
         get() = ConfigPersistentStateComponent.instance.state
 
     // ui components
+    private var accessToken: JTextField? = JTextField()
     private var usernameField: JTextField? = JTextField()
     private var passwordField: JPasswordField? = JPasswordField()
 
@@ -95,8 +96,6 @@ class ConfigPersistentStateConfigurable : Configurable, NoScroll, Disposable {
 
                     val cl : CardLayout = cardPanel?.layout as CardLayout
                     cl.show(cardPanel, "logoutPanel")
-
-                    statusLabel?.text = "Logged in as ${state.username}"
                 }
             }
         }

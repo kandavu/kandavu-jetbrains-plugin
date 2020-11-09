@@ -1,2 +1,3 @@
-# intellij-plugin
-IntelliJ Plugin for interacting with Kandavu
+# kandavu-jetbrains-plugin
+
+Jetbrains Plugin for interacting with Kandavu

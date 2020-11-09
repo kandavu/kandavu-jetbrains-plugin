@@ -22,6 +22,7 @@ open class ConfigPersistentStateComponent  : PersistentStateComponent<ConfigPers
 
     // the POKO class that always keeps our state
     data class State(
+        var accessToken: String? = null,
         var authorizationKey: String? = null,
         var username: String? = null,
         var API_URL: String? = "http://localhost:5000"
